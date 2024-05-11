@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/signal"
@@ -19,8 +20,6 @@ func main() {
 
 	initProcess := process.List()
 	listProcess := []process.ProcessStruct{}
-
-	ticker := time.NewTicker(5 * time.Second)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -42,11 +41,16 @@ func main() {
 			}
 		}
 
+		fmt.Print("Press 'Enter' to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+
 		os.Exit(1)
 	}()
 
+	ticker := time.NewTicker(5 * time.Second)
 	for range ticker.C {
 		listProcess = process.List()
+		fmt.Print(".")
 	}
 
 	fmt.Println("Done")
