@@ -20,11 +20,15 @@ func main() {
 
 	initProcess := process.List()
 	listProcess := []process.ProcessStruct{}
+	scanning := true
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
+
+		scanning = false
+		fmt.Println("Exiting...")
 
 		// differences
 		for _, p := range listProcess {
@@ -49,10 +53,10 @@ func main() {
 
 	ticker := time.NewTicker(5 * time.Second)
 	for range ticker.C {
-		listProcess = process.List()
-		fmt.Print(".")
+		if scanning {
+			listProcess = process.List()
+			fmt.Print(".")
+		}
 	}
-
-	fmt.Println("Done")
 
 }
