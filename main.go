@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/afterprocessclean/process"
@@ -19,28 +22,31 @@ func main() {
 
 	ticker := time.NewTicker(5 * time.Second)
 
-	for range ticker.C {
-		listProcess = process.List()
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
 
-		if len(listProcess) != len(initProcess) {
-			fmt.Println("Process list changed")
-			break
-		}
-	}
+		// differences
+		for _, p := range listProcess {
+			isNew := true
+			for _, i := range initProcess {
+				if p.PID == i.PID {
+					isNew = false
+					break
+				}
+			}
 
-	// differences
-	for _, p := range listProcess {
-		isNew := true
-		for _, i := range initProcess {
-			if p.PID == i.PID {
-				isNew = false
-				break
+			if isNew {
+				fmt.Println("New process: ", p.PID, p.Path, p.Filename)
 			}
 		}
 
-		if isNew {
-			fmt.Println("New process: ", p.PID, p.Path, p.Filename)
-		}
+		os.Exit(1)
+	}()
+
+	for range ticker.C {
+		listProcess = process.List()
 	}
 
 	fmt.Println("Done")
