@@ -12,14 +12,13 @@ import (
 )
 
 const (
-	version = "0.1.0"
+	version = "0.1.2"
 )
 
 func main() {
 	fmt.Println("AfterProcessClean v" + version)
 
-	initProcess := process.List()
-	listProcess := []process.ProcessStruct{}
+	control.UpdateList(process.List(), true)
 	scanning := true
 
 	c := make(chan os.Signal)
@@ -31,18 +30,8 @@ func main() {
 		fmt.Println("Exiting...")
 
 		// differences
-		for _, p := range listProcess {
-			isNew := true
-			for _, i := range initProcess {
-				if p.PID == i.PID {
-					isNew = false
-					break
-				}
-			}
-
-			if isNew {
-				fmt.Println("New process: ", p.PID, p.Path, p.Filename)
-			}
+		for _, p := range control.AfterList() {
+			fmt.Println("New process: ", p.Path, p.CRC32, time.Since(p.RuningSince))
 		}
 
 		fmt.Print("Press 'Enter' to continue...")
@@ -54,7 +43,7 @@ func main() {
 	ticker := time.NewTicker(5 * time.Second)
 	for range ticker.C {
 		if scanning {
-			listProcess = process.List()
+			control.UpdateList(process.List(), false)
 			fmt.Print(".")
 		}
 	}
