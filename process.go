@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/afterprocessclean/process"
@@ -30,6 +31,8 @@ func (c *controlStruct) addProcess(path string, crc32 string, before bool) {
 		RuningSince: time.Now(),
 		Before:      before,
 	})
+
+	fmt.Println("New process: ", path)
 }
 
 func (c *controlStruct) removeProcess(path string) {
@@ -39,6 +42,8 @@ func (c *controlStruct) removeProcess(path string) {
 			break
 		}
 	}
+
+	fmt.Println("Removed process: ", path)
 }
 
 func (c *controlStruct) getProcess(path string) *processStruct {
