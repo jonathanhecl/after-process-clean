@@ -32,7 +32,9 @@ func (c *controlStruct) addProcess(path string, crc32 string, before bool) {
 		Before:      before,
 	})
 
-	fmt.Println("New process: ", path)
+	if !before {
+		fmt.Println("New process: ", path)
+	}
 }
 
 func (c *controlStruct) removeProcess(path string) {
