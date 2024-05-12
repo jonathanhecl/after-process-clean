@@ -44,7 +44,6 @@ func main() {
 	for range ticker.C {
 		if scanning {
 			control.UpdateList(process.List(), false)
-			fmt.Print(".")
 		}
 	}
 
