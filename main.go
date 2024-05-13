@@ -29,7 +29,6 @@ func main() {
 		scanning = false
 		fmt.Println("Exiting...")
 
-		// differences
 		for _, p := range control.AfterList() {
 			fmt.Println("New process: ", p.Path, p.CRC32, time.Since(p.RuningSince))
 		}
