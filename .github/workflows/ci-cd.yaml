@@ -1,0 +1,59 @@
+name: CI/CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GOVERSION: "1.23"
+  NAME: "AfterProcessClean"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GOVERSION }}
+      - name: Test
+        run: go test -v ./...
+
+  build_windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GOVERSION }}
+      - name: Build for Windows
+        run: |
+          set GOOS=windows
+          set GOARCH=amd64
+          go build -o ${{ env.NAME }}-win64.exe .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-binaries
+          path: ${{ env.NAME }}-win64.exe
+
+  release:
+    needs: [build_windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-binaries
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ env.NAME }}-win64.exe
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}

@@ -51,8 +51,6 @@ var (
 	procProcess32Next            = modKernel32.NewProc("Process32NextW")
 	procOpenProcess              = modKernel32.NewProc("OpenProcess")
 	procQueryDosDeviceW          = modKernel32.NewProc("QueryDosDeviceW")
-	procSuspendThread            = modKernel32.NewProc("SuspendThread")
-	procGetModuleFileNameExW     = modKernel32.NewProc("GetModuleFileNameExW")
 
 	modPsapi                     = syscall.NewLazyDLL("psapi.dll")
 	procGetProcessImageFileNameW = modPsapi.NewProc("GetProcessImageFileNameW")
@@ -91,7 +89,7 @@ func listDevices() {
 }
 
 func List() (list []ProcessStruct) {
-	process = nil
+	process = []ProcessStruct{}
 
 	handle, _, _ := procCreateToolhelp32Snapshot.Call(0x00000002, 0)
 	if handle < 0 {
@@ -129,17 +127,26 @@ func getInfoProcess(e *PROCESSENTRY32) ProcessStruct {
 
 	var sincpath chan string = make(chan string)
 	go getProcessPath(e.ProcessID, sincpath, filename)
+	path := <-sincpath // Close the channel after using it
+	close(sincpath)
 
 	return ProcessStruct{
 		PID:      int(e.ProcessID),
 		Filename: filename,
-		Path:     <-sincpath,
+		Path:     path,
 	}
 }
 
 func getProcessPath(pid uint32, sincpath chan string, filename string) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Avoid panic if the channel is closed
+		}
+	}()
+
 	if pid == 0 || filename == "System" || filename == "Secure System" || filename == "Registry" {
 		sincpath <- ""
+		return
 	}
 
 	handle, _, _ := procOpenProcess.Call(PROCESS_QUERY_INFORMATION+PROCESS_VM_READ+PROCESS_QUERY_LIMITED_INFORMATION, uintptr(0), uintptr(pid))
@@ -154,6 +161,7 @@ func getProcessPath(pid uint32, sincpath chan string, filename string) {
 				registry.READ)
 			if err != nil {
 				sincpath <- ""
+				return
 			}
 		}
 		defer k.Close()
@@ -161,8 +169,10 @@ func getProcessPath(pid uint32, sincpath chan string, filename string) {
 		val, _, err1 := k.GetStringValue("")
 		if err1 != nil {
 			sincpath <- "nada"
+			return
 		}
 		sincpath <- val
+		return
 	}
 
 	path := make([]uint16, MAX_PATH)
@@ -170,6 +180,7 @@ func getProcessPath(pid uint32, sincpath chan string, filename string) {
 	var n uint32 = uint32(r0)
 	if n == 0 {
 		sincpath <- ""
+		return
 	}
 
 	pathStr := syscall.UTF16ToString(path[0:n])
